@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PHASES } from "@/lib/types";
+import AddPcForm from "@/components/AddPcForm";
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
@@ -79,6 +80,11 @@ export default async function AdminDashboard() {
         <StatCard label="Chose to join DGroup" value={joinCount} />
         <StatCard label="Bounced emails" value={bouncedCount} />
         <StatCard label="Unclaimed DGroup sign-ups" value={unclaimedCount} />
+      </div>
+
+      <div className="mb-10">
+        <h2 className="font-serif text-lg mb-3">Add a Prayer Coach</h2>
+        <AddPcForm />
       </div>
 
       <h2 className="font-serif text-lg mb-3">All guests</h2>

@@ -21,6 +21,7 @@ export async function startCheckin(tableNumber: string) {
     .eq("auth_user_id", user.id)
     .single();
 
+  // Placeholder unique-number scheme — replace once the real badge/ID scheme is decided.
   const uniqueNumber = `G-${Date.now().toString().slice(-6)}`;
 
   const { data: guest, error: guestErr } = await supabase
@@ -43,12 +44,14 @@ export async function startCheckin(tableNumber: string) {
 
 // ------------------------------------------------------------------
 // Guest-facing helper — look up a session by its QR token.
+// This is the ONLY way guest pages access data: no Supabase Auth session
+// is ever issued to a guest device.
 // ------------------------------------------------------------------
 export async function getSessionByToken(token: string) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("checkin_sessions")
-    .select("*, guests(*), discipleship_responses(*)")
+    .select("*, guests(*), discipleship_responses(*), dgroup_registrations(*)")
     .eq("qr_token", token)
     .single();
   if (error) return null;
@@ -100,6 +103,7 @@ export async function submitPrayerRequest(token: string, requestText: string) {
   revalidatePath(`/g/${token}/prayer`);
 }
 
+// Guest has nothing to share — move on to Phase 3 without logging a request.
 export async function skipPrayerRequest(token: string) {
   const admin = createAdminClient();
   const { data: session } = await admin
@@ -159,6 +163,7 @@ export async function pcConfirmAndLock(sessionId: string) {
     .eq("session_id", sessionId);
   await supabase.from("checkin_sessions").update({ phase: "materials" }).eq("id", sessionId);
 
+  // Auto-create the letters_log row that Phase 4 tracks.
   await supabase.from("letters_log").upsert(
     { session_id: sessionId, print_status: "pending", email_status: "pending" },
     { onConflict: "session_id" }
@@ -169,15 +174,20 @@ export async function pcConfirmAndLock(sessionId: string) {
 
 // ------------------------------------------------------------------
 // PHASE 4 — Materials Delivery
+// Print + email are external integrations (see README "Integrations to wire up").
+// These actions record status transitions; wire the TODOs to your real
+// print queue and email provider (e.g. Resend) when ready.
 // ------------------------------------------------------------------
 export async function triggerMaterialsDelivery(sessionId: string) {
   const supabase = await createServerSupabase();
 
+  // TODO: call print queue API here.
   await supabase
     .from("letters_log")
     .update({ print_status: "printed", print_requested_at: new Date().toISOString(), printed_at: new Date().toISOString() })
     .eq("session_id", sessionId);
 
+  // TODO: call email provider here (e.g. Resend). Simulate success for now.
   await supabase
     .from("letters_log")
     .update({ email_status: "sent", email_sent_at: new Date().toISOString() })
@@ -272,6 +282,7 @@ export async function routeDgroupToPc(sessionId: string) {
   revalidatePath(`/pc/session/${sessionId}`);
 }
 
+// PC doesn't have room in their own DGroup — release it so any other PC can claim it.
 export async function releaseDgroupToPool(sessionId: string) {
   const supabase = await createServerSupabase();
   await supabase
@@ -283,6 +294,7 @@ export async function releaseDgroupToPool(sessionId: string) {
   revalidatePath("/pc/dashboard");
 }
 
+// Any PC browsing the dashboard's unclaimed pool can pick this guest up for their own DGroup.
 export async function claimDgroupRegistration(registrationId: string) {
   const supabase = await createServerSupabase();
   const {
@@ -304,4 +316,56 @@ export async function claimDgroupRegistration(registrationId: string) {
     })
     .eq("id", registrationId);
   revalidatePath("/pc/dashboard");
+}
+
+// ------------------------------------------------------------------
+// ADMIN — add a new Prayer Coach account (demo/onboarding helper).
+// Creates both the Supabase Auth login and the linked staff row,
+// and returns a one-time temporary password for the admin to share.
+// ------------------------------------------------------------------
+function generateTempPassword() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  let pass = "";
+  for (let i = 0; i < 10; i++) {
+    pass += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return pass;
+}
+
+export async function addPrayerCoach(fullName: string, email: string) {
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in.");
+
+  const { data: requesterStaff } = await supabase
+    .from("staff")
+    .select("role")
+    .eq("auth_user_id", user.id)
+    .single();
+  if (requesterStaff?.role !== "admin") {
+    throw new Error("Only admins can add Prayer Coach accounts.");
+  }
+
+  const admin = createAdminClient();
+  const tempPassword = generateTempPassword();
+
+  const { data: created, error: createErr } = await admin.auth.admin.createUser({
+    email,
+    password: tempPassword,
+    email_confirm: true,
+  });
+  if (createErr) throw createErr;
+
+  const { error: staffErr } = await admin.from("staff").insert({
+    auth_user_id: created.user.id,
+    full_name: fullName,
+    email,
+    role: "pc",
+  });
+  if (staffErr) throw staffErr;
+
+  revalidatePath("/pc/admin");
+  return { email, tempPassword };
 }
