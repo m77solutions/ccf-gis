@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient as createServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { ActivityTier, BibleLanguage, DgroupMode, DgroupStatus } from "@/lib/types";
+import type { ActivityTier, BibleLanguage, DgroupMode, DgroupStatus, StaffRole } from "@/lib/types";
 
 // ------------------------------------------------------------------
 // PHASE 1 — PC starts a new guest check-in, gets a QR token back
@@ -368,4 +368,30 @@ export async function addPrayerCoach(fullName: string, email: string) {
 
   revalidatePath("/pc/admin");
   return { email, tempPassword };
+}
+
+// Edit an existing staff member's details, role, or active status.
+export async function updateStaffMember(
+  staffId: string,
+  data: { full_name: string; email: string; role: StaffRole; active: boolean }
+) {
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in.");
+
+  const { data: requesterStaff } = await supabase
+    .from("staff")
+    .select("role")
+    .eq("auth_user_id", user.id)
+    .single();
+  if (requesterStaff?.role !== "admin") {
+    throw new Error("Only admins can manage Prayer Coach accounts.");
+  }
+
+  const { error } = await supabase.from("staff").update(data).eq("id", staffId);
+  if (error) throw error;
+
+  revalidatePath("/pc/admin/coaches");
 }

@@ -6,6 +6,8 @@ export type Phase =
   | "dgroup"
   | "complete";
 
+export type StaffRole = "pc" | "runner" | "backroom" | "dgroup_leader" | "admin";
+
 export type DgroupStatus = "join" | "undecided" | "has_dgroup";
 export type ActivityTier = "pray" | "care" | "share";
 export type BibleLanguage = "english" | "pinoy" | "tagalog";
