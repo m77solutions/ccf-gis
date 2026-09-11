@@ -98,6 +98,22 @@ export async function submitPrayerRequest(token: string, requestText: string) {
     session_id: session.id,
     request_text: requestText,
   });
+  await admin.from("checkin_sessions").update({ phase: "selection" }).eq("id", session.id);
+
+  revalidatePath(`/g/${token}/prayer`);
+}
+
+// Guest has nothing to share — move on to Phase 3 without logging a request.
+export async function skipPrayerRequest(token: string) {
+  const admin = createAdminClient();
+  const { data: session } = await admin
+    .from("checkin_sessions")
+    .select("id")
+    .eq("qr_token", token)
+    .single();
+  if (!session) throw new Error("Session not found.");
+
+  await admin.from("checkin_sessions").update({ phase: "selection" }).eq("id", session.id);
 
   revalidatePath(`/g/${token}/prayer`);
 }

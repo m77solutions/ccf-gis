@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useTransition, use } from "react";
-import { submitPrayerRequest } from "@/app/actions";
+import { useRouter } from "next/navigation";
+import { submitPrayerRequest, skipPrayerRequest } from "@/app/actions";
 
 export default function PrayerPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [text, setText] = useState("");
-  const [submitted, setSubmitted] = useState(false);
 
   return (
     <main className="flex-1 px-6 py-14 max-w-md mx-auto w-full">
@@ -19,32 +20,42 @@ export default function PrayerPage({ params }: { params: Promise<{ token: string
         Your host would love to pray with you. This is optional — feel free to skip it.
       </p>
 
-      {submitted ? (
-        <p className="text-sm" style={{ color: "var(--teal-deep)" }}>
-          Thank you — your host can see this now.
-        </p>
-      ) : (
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            startTransition(async () => {
-              await submitPrayerRequest(token, text);
-              setSubmitted(true);
-            });
-          }}
-        >
-          <textarea
-            className="field min-h-32"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Share what's on your heart…"
-          />
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          startTransition(async () => {
+            await submitPrayerRequest(token, text);
+            router.push(`/g/${token}/selection`);
+          });
+        }}
+      >
+        <textarea
+          className="field min-h-32"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Share what's on your heart…"
+        />
+        <div className="flex items-center gap-4">
           <button type="submit" disabled={pending || !text.trim()} className="btn-primary">
             {pending ? "Sending…" : "Share with my host"}
           </button>
-        </form>
-      )}
+          <button
+            type="button"
+            disabled={pending}
+            className="text-sm underline"
+            style={{ color: "var(--ink-soft)" }}
+            onClick={() =>
+              startTransition(async () => {
+                await skipPrayerRequest(token);
+                router.push(`/g/${token}/selection`);
+              })
+            }
+          >
+            Skip
+          </button>
+        </div>
+      </form>
     </main>
   );
 }
