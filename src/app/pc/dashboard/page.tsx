@@ -23,6 +23,14 @@ export default async function Dashboard() {
     .is("claimed_by_staff_id", null)
     .order("created_at", { ascending: false });
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: staffRow } = user
+    ? await supabase.from("staff").select("role").eq("auth_user_id", user.id).single()
+    : { data: null };
+  const isAdmin = staffRow?.role === "admin";
+
   return (
     <main className="flex-1 px-6 py-10 max-w-3xl mx-auto w-full">
       <div className="flex items-start justify-between mb-8">
@@ -36,6 +44,14 @@ export default async function Dashboard() {
           <button className="btn-secondary text-sm">Sign out</button>
         </form>
       </div>
+
+      {isAdmin && (
+        <div className="mb-8">
+          <Link href="/pc/admin" className="text-sm underline" style={{ color: "var(--teal-deep)" }}>
+            View admin overview →
+          </Link>
+        </div>
+      )}
 
       <div className="mb-10">
         <NewCheckinButton />
