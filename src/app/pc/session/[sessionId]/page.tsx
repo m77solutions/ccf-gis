@@ -60,9 +60,15 @@ export default async function SessionPage({
             <h2 className="font-serif text-lg mb-3">Guest link</h2>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={qrDataUrl} alt="QR code for guest session" width={160} height={160} />
-            <p className="text-xs mt-2 break-all" style={{ color: "var(--ink-soft)" }}>
+            <a
+              href={guestUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs mt-2 break-all underline block"
+              style={{ color: "var(--teal-deep)" }}
+            >
               {guestUrl}
-            </p>
+            </a>
           </section>
 
           {/* Phase 2 — prayer summary, read-only */}
@@ -158,7 +164,7 @@ export default async function SessionPage({
                     <span>Occupation</span><span style={{ color: "var(--ink)" }}>{dgroupReg.occupation}</span>
                     <span>Language</span><span style={{ color: "var(--ink)" }}>{dgroupReg.language}</span>
                   </div>
-                  <DgroupRouting sessionId={session.id} leaders={leaders ?? []} />
+                  <DgroupRouting sessionId={session.id} />
                 </>
               ) : (
                 <p className="text-sm" style={{ color: "var(--ink-soft)" }}>
