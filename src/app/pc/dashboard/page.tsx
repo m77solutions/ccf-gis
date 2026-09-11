@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import NewCheckinButton from "@/components/NewCheckinButton";
+import { ClaimButton } from "@/components/SessionControls";
 import { PHASES } from "@/lib/types";
 import { signOut } from "@/app/pc/login/actions";
 
@@ -11,6 +12,16 @@ export default async function Dashboard() {
     .select("id, phase, created_at, guests(unique_number, full_name, table_number)")
     .order("created_at", { ascending: false })
     .limit(50);
+
+  // Guests whose PC didn't have room in their own DGroup — open to any PC to claim.
+  const { data: unclaimed } = await supabase
+    .from("dgroup_registrations")
+    .select(
+      "id, life_stage, schedule_pref, mode, checkin_sessions(guests(full_name, unique_number, table_number))"
+    )
+    .eq("joining_pc_group", false)
+    .is("claimed_by_staff_id", null)
+    .order("created_at", { ascending: false });
 
   return (
     <main className="flex-1 px-6 py-10 max-w-3xl mx-auto w-full">
@@ -29,6 +40,35 @@ export default async function Dashboard() {
       <div className="mb-10">
         <NewCheckinButton />
       </div>
+
+      {unclaimed && unclaimed.length > 0 && (
+        <div className="mb-10">
+          <h2 className="font-serif text-lg mb-3">Unclaimed DGroup sign-ups</h2>
+          <ul className="flex flex-col gap-3">
+            {unclaimed.map((reg) => {
+              const session = Array.isArray(reg.checkin_sessions)
+                ? reg.checkin_sessions[0]
+                : reg.checkin_sessions;
+              const guest = session && (Array.isArray(session.guests) ? session.guests[0] : session.guests);
+              return (
+                <li
+                  key={reg.id}
+                  className="flex items-center justify-between p-3 rounded text-sm"
+                  style={{ background: "var(--paper-raised)", border: "1px solid var(--rule)" }}
+                >
+                  <div>
+                    <p className="font-medium">{guest?.full_name || "Guest"}</p>
+                    <p style={{ color: "var(--ink-soft)" }}>
+                      {reg.life_stage} · {reg.schedule_pref} · {reg.mode}
+                    </p>
+                  </div>
+                  <ClaimButton registrationId={reg.id} />
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       <ul className="flex flex-col">
         {sessions?.length === 0 && (

@@ -9,7 +9,8 @@ import {
   correctGuestEmail,
   markKitDelivered,
   routeDgroupToPc,
-  routeDgroupToLeader,
+  releaseDgroupToPool,
+  claimDgroupRegistration,
 } from "@/app/actions";
 import type { ActivityTier } from "@/lib/types";
 
@@ -126,15 +127,8 @@ export function KitDeliveredButton({
   );
 }
 
-export function DgroupRouting({
-  sessionId,
-  leaders,
-}: {
-  sessionId: string;
-  leaders: { id: string; group_name: string }[];
-}) {
+export function DgroupRouting({ sessionId }: { sessionId: string }) {
   const [pending, startTransition] = useTransition();
-  const [leaderId, setLeaderId] = useState("");
 
   return (
     <div className="flex flex-col gap-3">
@@ -145,28 +139,30 @@ export function DgroupRouting({
       >
         Add to my own DGroup
       </button>
-      <div className="flex items-end gap-2">
-        <div>
-          <label className="block text-xs mb-1" style={{ color: "var(--ink-soft)" }}>
-            Or route to another leader
-          </label>
-          <select className="field" value={leaderId} onChange={(e) => setLeaderId(e.target.value)}>
-            <option value="">Select leader…</option>
-            {leaders.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.group_name}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div>
         <button
-          disabled={pending || !leaderId}
-          className="btn-secondary"
-          onClick={() => startTransition(() => routeDgroupToLeader(sessionId, leaderId))}
+          disabled={pending}
+          className="btn-secondary self-start"
+          onClick={() => startTransition(() => releaseDgroupToPool(sessionId))}
         >
-          Route
+          No room in my group — release to other PCs
         </button>
+        <p className="text-xs mt-1" style={{ color: "var(--ink-soft)" }}>
+          This guest&apos;s details will show up on every PC&apos;s dashboard until someone claims them.
+        </p>
       </div>
     </div>
+  );
+}
+export function ClaimButton({ registrationId }: { registrationId: string }) {
+  const [pending, startTransition] = useTransition();
+  return (
+    <button
+      disabled={pending}
+      className="btn-secondary"
+      onClick={() => startTransition(() => claimDgroupRegistration(registrationId))}
+    >
+      {pending ? "Adding…" : "Add to my DGroup"}
+    </button>
   );
 }

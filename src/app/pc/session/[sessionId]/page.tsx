@@ -31,11 +31,6 @@ export default async function SessionPage({
     return <main className="p-10">Session not found.</main>;
   }
 
-  const { data: leaders } = await supabase
-    .from("dgroup_leaders")
-    .select("id, group_name")
-    .eq("active", true);
-
   const guest = session.guests;
   const discipleship = session.discipleship_responses;
   const letters = session.letters_log;
