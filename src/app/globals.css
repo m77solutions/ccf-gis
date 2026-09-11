@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f4f6f4;
+  --paper-raised: #ffffff;
+  --ink: #1b2430;
+  --ink-soft: #4a5568;
+  --rule: #d8dcd6;
+
+  --amber: #d99a2b;    /* welcome / intake */
+  --amber-deep: #a9740f;
+  --teal: #1f6f65;     /* growth / dgroup */
+  --teal-deep: #15504a;
+  --rose: #b96a74;     /* care / prayer */
+  --rose-deep: #8e4750;
+
+  --font-serif: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-rule: var(--rule);
+  --color-amber: var(--amber);
+  --color-amber-deep: var(--amber-deep);
+  --color-teal: var(--teal);
+  --color-teal-deep: var(--teal-deep);
+  --color-rose: var(--rose);
+  --color-rose-deep: var(--rose-deep);
+  --font-serif: var(--font-serif);
+  --font-sans: var(--font-sans);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+h1, h2, h3, .font-serif {
+  font-family: var(--font-serif);
+}
+
+/* Booklet-style form controls — deliberately not the rounded SaaS-card default */
+.field {
+  width: 100%;
+  border: 1px solid var(--rule);
+  background: var(--paper-raised);
+  padding: 0.65rem 0.85rem;
+  border-radius: 3px;
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+.field:focus {
+  outline: 2px solid var(--teal);
+  outline-offset: 1px;
+  border-color: var(--teal);
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0.7rem 1.4rem;
+  border-radius: 3px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: background 0.15s ease;
+}
+.btn-primary:hover { background: var(--teal-deep); }
+.btn-primary:disabled { background: var(--ink-soft); cursor: not-allowed; }
+
+.btn-secondary {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  padding: 0.7rem 1.4rem;
+  border-radius: 3px;
+  font-size: 0.95rem;
+}
+.btn-secondary:hover { border-color: var(--ink); }
