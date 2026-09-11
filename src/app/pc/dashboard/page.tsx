@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import NewCheckinButton from "@/components/NewCheckinButton";
 import { ClaimButton } from "@/components/SessionControls";
 import { PHASES } from "@/lib/types";
+import { formatDateTime } from "@/lib/format";
 import { signOut } from "@/app/pc/login/actions";
 
 export default async function Dashboard() {
@@ -107,6 +108,9 @@ export default async function Dashboard() {
                     <span className="text-sm" style={{ color: "var(--ink-soft)" }}>
                       · {guest?.unique_number} · Table {guest?.table_number || "—"}
                     </span>
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>
+                    Checked in {formatDateTime(s.created_at)}
                   </p>
                 </div>
                 <span className="text-sm" style={{ color: "var(--ink-soft)" }}>

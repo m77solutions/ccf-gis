@@ -1,6 +1,7 @@
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/server";
 import PhaseRail from "@/components/PhaseRail";
+import { formatDateTime } from "@/lib/format";
 import {
   TierPicker,
   ConfirmLockButton,
@@ -45,9 +46,12 @@ export default async function SessionPage({
       <p className="text-sm mb-1" style={{ color: "var(--amber-deep)" }}>
         {guest?.unique_number} · Table {guest?.table_number || "—"}
       </p>
-      <h1 className="text-2xl font-serif mb-10">
+      <h1 className="text-2xl font-serif mb-1">
         {guest?.full_name || "Guest not yet named"}
       </h1>
+      <p className="text-xs mb-10" style={{ color: "var(--ink-soft)" }}>
+        Checked in {formatDateTime(session.created_at)}
+      </p>
 
       <div className="grid md:grid-cols-[200px_1fr] gap-10">
         <aside>
