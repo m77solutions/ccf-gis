@@ -92,11 +92,12 @@ export default async function AdminDashboard() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left border-b" style={{ borderColor: "var(--rule)" }}>
-              <th className="py-2 pr-4">Guest</th>
               <th className="py-2 pr-4">PC</th>
+              <th className="py-2 pr-4">Guest</th>
+              <th className="py-2 pr-4">Table #</th>
               <th className="py-2 pr-4">Phase</th>
               <th className="py-2 pr-4">DGroup</th>
-              <th className="py-2 pr-4">Materials</th>
+              <th className="py-2 pr-4">Kit</th>
               <th className="py-2 pr-4">Prayer</th>
             </tr>
           </thead>
@@ -109,15 +110,16 @@ export default async function AdminDashboard() {
               const phaseInfo = PHASES.find((p) => p.key === s.phase);
               return (
                 <tr key={s.id} className="border-b" style={{ borderColor: "var(--rule)" }}>
+                  <td className="py-2 pr-4">{pc?.full_name || "—"}</td>
                   <td className="py-2 pr-4">
                     <Link href={`/pc/session/${s.id}`} className="underline">
                       {guest?.full_name || guest?.unique_number || "Guest"}
                     </Link>
                     <div className="text-xs" style={{ color: "var(--ink-soft)" }}>
-                      {guest?.unique_number} · Table {guest?.table_number || "—"}
+                      {guest?.unique_number}
                     </div>
                   </td>
-                  <td className="py-2 pr-4">{pc?.full_name || "—"}</td>
+                  <td className="py-2 pr-4">{guest?.table_number || "—"}</td>
                   <td className="py-2 pr-4">{phaseInfo?.label}</td>
                   <td className="py-2 pr-4">{discipleship?.dgroup_status || "—"}</td>
                   <td className="py-2 pr-4">

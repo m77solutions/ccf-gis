@@ -34,7 +34,7 @@ export default function SelectionPage({ params }: { params: Promise<{ token: str
 
       {submitted ? (
         <p className="text-sm" style={{ color: "var(--teal-deep)" }}>
-          Thanks! Hand your phone back to your host to confirm.
+          Thanks! Show your phone back to your PC to confirm.
         </p>
       ) : (
         <div className="flex flex-col gap-8">

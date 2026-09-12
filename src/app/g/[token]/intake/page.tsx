@@ -9,7 +9,13 @@ export default function IntakePage({ params }: { params: Promise<{ token: string
   const { token } = use(params);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [form, setForm] = useState({ full_name: "", phone: "", email: "", first_time: true });
+  const [form, setForm] = useState({
+    full_name: "",
+    phone: "",
+    email: "",
+    age: "",
+    first_time: true,
+  });
 
   return (
     <main className="flex-1 px-6 py-14 max-w-md mx-auto w-full">
@@ -26,14 +32,20 @@ export default function IntakePage({ params }: { params: Promise<{ token: string
         onSubmit={(e) => {
           e.preventDefault();
           startTransition(async () => {
-            await submitIntake(token, form);
+            await submitIntake(token, {
+              full_name: form.full_name,
+              phone: form.phone,
+              email: form.email,
+              age: form.age ? parseInt(form.age, 10) : null,
+              first_time: form.first_time,
+            });
             router.push(`/g/${token}/prayer`);
           });
         }}
       >
         <div>
           <label className="block text-sm mb-1" style={{ color: "var(--ink-soft)" }}>
-            Full name
+            Name
           </label>
           <input
             required
@@ -44,7 +56,7 @@ export default function IntakePage({ params }: { params: Promise<{ token: string
         </div>
         <div>
           <label className="block text-sm mb-1" style={{ color: "var(--ink-soft)" }}>
-            Phone number
+            Contact
           </label>
           <input
             required
@@ -55,7 +67,7 @@ export default function IntakePage({ params }: { params: Promise<{ token: string
         </div>
         <div>
           <label className="block text-sm mb-1" style={{ color: "var(--ink-soft)" }}>
-            Email
+            E-mail
           </label>
           <input
             type="email"
@@ -63,6 +75,19 @@ export default function IntakePage({ params }: { params: Promise<{ token: string
             className="field"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="block text-sm mb-1" style={{ color: "var(--ink-soft)" }}>
+            Age
+          </label>
+          <input
+            type="number"
+            min={0}
+            max={120}
+            className="field"
+            value={form.age}
+            onChange={(e) => setForm({ ...form, age: e.target.value })}
           />
         </div>
         <label className="flex items-center gap-2 text-sm mt-1" style={{ color: "var(--ink-soft)" }}>

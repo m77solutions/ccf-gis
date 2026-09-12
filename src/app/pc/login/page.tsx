@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { signIn } from "./actions";
 
 function LoginForm() {
@@ -81,6 +82,13 @@ export default function LoginPage() {
         <p className="text-xs mt-8" style={{ color: "var(--ink-soft)" }}>
           Accounts are created by an admin in Supabase Auth, then linked to a{" "}
           <code>staff</code> row. See README.
+        </p>
+        <p className="text-xs mt-2" style={{ color: "var(--ink-soft)" }}>
+          Admin?{" "}
+          <Link href="/admin/login" className="underline">
+            Sign in here instead
+          </Link>
+          .
         </p>
       </div>
     </main>

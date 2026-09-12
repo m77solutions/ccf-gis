@@ -63,7 +63,7 @@ export async function getSessionByToken(token: string) {
 // ------------------------------------------------------------------
 export async function submitIntake(
   token: string,
-  data: { full_name: string; phone: string; email: string; first_time: boolean }
+  data: { full_name: string; phone: string; email: string; age: number | null; first_time: boolean }
 ) {
   const admin = createAdminClient();
   const { data: session } = await admin

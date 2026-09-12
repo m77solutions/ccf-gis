@@ -129,7 +129,7 @@ export default async function SessionPage({
           {/* Phase 4 — materials */}
           {session.phase === "materials" && (
             <section>
-              <h2 className="font-serif text-lg mb-3">Materials delivery</h2>
+              <h2 className="font-serif text-lg mb-3">Kit delivery</h2>
               <div className="text-sm mb-4 flex flex-col gap-1" style={{ color: "var(--ink-soft)" }}>
                 <p>Print: <span style={{ color: "var(--ink)" }}>{letters?.print_status ?? "pending"}</span></p>
                 <p>Email: <span style={{ color: "var(--ink)" }}>{letters?.email_status ?? "pending"}</span></p>

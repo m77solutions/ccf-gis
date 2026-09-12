@@ -79,8 +79,8 @@ export interface DgroupRegistration {
 export const PHASES: { key: Phase; label: string; accent: string }[] = [
   { key: "intake", label: "Welcome & Intake", accent: "amber" },
   { key: "engagement", label: "Engagement & Prayer", accent: "rose" },
-  { key: "selection", label: "Self-Selection", accent: "teal" },
-  { key: "materials", label: "Materials Delivery", accent: "amber" },
+  { key: "selection", label: "PC Absorbed", accent: "teal" },
+  { key: "materials", label: "Kit Delivery", accent: "amber" },
   { key: "dgroup", label: "DGroup Registration", accent: "teal" },
   { key: "complete", label: "Journey Complete", accent: "ink" },
 ];
