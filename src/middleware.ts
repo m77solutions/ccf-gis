@@ -29,9 +29,10 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const publicPcRoutes = ["/pc/login", "/pc/forgot-password", "/pc/reset-password"];
   const isPcRoute =
     request.nextUrl.pathname.startsWith("/pc") &&
-    !request.nextUrl.pathname.startsWith("/pc/login");
+    !publicPcRoutes.some((route) => request.nextUrl.pathname.startsWith(route));
 
   if (isPcRoute && !user) {
     const loginUrl = new URL("/pc/login", request.url);

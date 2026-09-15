@@ -1,29 +1,20 @@
-"use client";
+import { getSessionByToken } from "@/app/actions";
+import SelectionForm from "@/components/SelectionForm";
 
-import { useState, useTransition, use } from "react";
-import { submitGuestSelection } from "@/app/actions";
-import type { BibleLanguage, DgroupStatus } from "@/lib/types";
+export default async function SelectionPage({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}) {
+  const { token } = await params;
+  const session = await getSessionByToken(token);
 
-const DGROUP_OPTIONS: { value: DgroupStatus; label: string }[] = [
-  { value: "join", label: "I'd like to join a DGroup" },
-  { value: "undecided", label: "I'm still deciding" },
-  { value: "has_dgroup", label: "I'm already in a DGroup" },
-];
+  const single = <T,>(v: T | T[] | null | undefined) => (Array.isArray(v) ? v[0] : v);
+  const discipleship = session ? single(session.discipleship_responses) : null;
 
-const BIBLE_OPTIONS: { value: BibleLanguage; label: string }[] = [
-  { value: "english", label: "English" },
-  { value: "pinoy", label: "Pinoy" },
-  { value: "tagalog", label: "Tagalog" },
-];
-
-export default function SelectionPage({ params }: { params: Promise<{ token: string }> }) {
-  const { token } = use(params);
-  const [pending, startTransition] = useTransition();
-  const [dgroupStatus, setDgroupStatus] = useState<DgroupStatus | null>(null);
-  const [bibleLanguage, setBibleLanguage] = useState<BibleLanguage | null>(null);
-  const [submitted, setSubmitted] = useState(false);
-
-  const canSubmit = dgroupStatus && bibleLanguage;
+  // Guest already answered — don't re-show a blank form if they re-scan the
+  // link (e.g. while waiting for their PC to pick an activity tier & lock).
+  const alreadySubmitted = !!discipleship?.dgroup_status && !!discipleship?.bible_language;
 
   return (
     <main className="flex-1 px-6 py-14 max-w-md mx-auto w-full">
@@ -32,66 +23,12 @@ export default function SelectionPage({ params }: { params: Promise<{ token: str
       </p>
       <h1 className="text-2xl font-serif mb-8">A couple of quick questions</h1>
 
-      {submitted ? (
+      {alreadySubmitted ? (
         <p className="text-sm" style={{ color: "var(--teal-deep)" }}>
-          Thanks! Show your phone back to your PC to confirm.
+          Thanks — we already have your answers. Show your phone back to your PC to confirm.
         </p>
       ) : (
-        <div className="flex flex-col gap-8">
-          <fieldset>
-            <legend className="text-sm mb-3" style={{ color: "var(--ink-soft)" }}>
-              Would you like to join a Discipleship Group (DGroup)?
-            </legend>
-            <div className="flex flex-col gap-2">
-              {DGROUP_OPTIONS.map((opt) => (
-                <label key={opt.value} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="dgroup"
-                    checked={dgroupStatus === opt.value}
-                    onChange={() => setDgroupStatus(opt.value)}
-                  />
-                  {opt.label}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <fieldset>
-            <legend className="text-sm mb-3" style={{ color: "var(--ink-soft)" }}>
-              Which Bible would you like?
-            </legend>
-            <div className="flex flex-col gap-2">
-              {BIBLE_OPTIONS.map((opt) => (
-                <label key={opt.value} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="bible"
-                    checked={bibleLanguage === opt.value}
-                    onChange={() => setBibleLanguage(opt.value)}
-                  />
-                  {opt.label}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <button
-            disabled={!canSubmit || pending}
-            className="btn-primary"
-            onClick={() =>
-              startTransition(async () => {
-                await submitGuestSelection(token, {
-                  dgroup_status: dgroupStatus!,
-                  bible_language: bibleLanguage!,
-                });
-                setSubmitted(true);
-              })
-            }
-          >
-            {pending ? "Submitting…" : "Submit"}
-          </button>
-        </div>
+        <SelectionForm token={token} />
       )}
     </main>
   );

@@ -28,7 +28,7 @@ export default async function Dashboard() {
     data: { user },
   } = await supabase.auth.getUser();
   const { data: staffRow } = user
-    ? await supabase.from("staff").select("role").eq("auth_user_id", user.id).single()
+    ? await supabase.from("staff").select("full_name, role").eq("auth_user_id", user.id).single()
     : { data: null };
   const isAdmin = staffRow?.role === "admin";
 
@@ -41,9 +41,17 @@ export default async function Dashboard() {
           </p>
           <h1 className="text-2xl font-serif">Today&apos;s guests</h1>
         </div>
-        <form action={signOut}>
-          <button className="btn-secondary text-sm">Sign out</button>
-        </form>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-3 text-sm" style={{ color: "var(--ink-soft)" }}>
+            <span>{staffRow?.full_name || user?.email}</span>
+            <form action={signOut}>
+              <button className="btn-secondary text-sm">Sign out</button>
+            </form>
+          </div>
+          <Link href="/pc/change-password" className="text-xs underline" style={{ color: "var(--teal-deep)" }}>
+            Change password
+          </Link>
+        </div>
       </div>
 
       {isAdmin && (

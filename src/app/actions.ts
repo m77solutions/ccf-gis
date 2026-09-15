@@ -3,7 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { createClient as createServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { ActivityTier, BibleLanguage, DgroupMode, DgroupStatus, StaffRole } from "@/lib/types";
+import type {
+  ActivityTier,
+  BibleLanguage,
+  DgroupMode,
+  DgroupStatus,
+  Gender,
+  PlacementStatus,
+  StaffRole,
+} from "@/lib/types";
 
 // ------------------------------------------------------------------
 // PHASE 1 — PC starts a new guest check-in, gets a QR token back
@@ -178,8 +186,46 @@ export async function pcConfirmAndLock(sessionId: string) {
 // These actions record status transitions; wire the TODOs to your real
 // print queue and email provider (e.g. Resend) when ready.
 // ------------------------------------------------------------------
+export async function verifyGuestEmail(sessionId: string, guestId: string, email: string) {
+  const supabase = await createServerSupabase();
+
+  const trimmed = email.trim();
+  const looksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+  if (!looksValid) throw new Error("That doesn't look like a valid email address.");
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: staffRow } = user
+    ? await supabase.from("staff").select("id").eq("auth_user_id", user.id).single()
+    : { data: null };
+
+  await supabase.from("guests").update({ email: trimmed }).eq("id", guestId);
+  await supabase.from("letters_log").upsert(
+    {
+      session_id: sessionId,
+      email_verified_at: new Date().toISOString(),
+      email_verified_by_staff_id: staffRow?.id ?? null,
+      // Re-verifying (e.g. after a correction) should clear any prior bounce.
+      bounced: false,
+    },
+    { onConflict: "session_id" }
+  );
+
+  revalidatePath(`/pc/session/${sessionId}`);
+}
+
 export async function triggerMaterialsDelivery(sessionId: string) {
   const supabase = await createServerSupabase();
+
+  const { data: letters } = await supabase
+    .from("letters_log")
+    .select("email_verified_at")
+    .eq("session_id", sessionId)
+    .single();
+  if (!letters?.email_verified_at) {
+    throw new Error("Verify the guest's email address before printing/sending the kit.");
+  }
 
   // TODO: call print queue API here.
   await supabase
@@ -210,7 +256,14 @@ export async function correctGuestEmail(sessionId: string, guestId: string, emai
   await supabase.from("guests").update({ email }).eq("id", guestId);
   await supabase
     .from("letters_log")
-    .update({ email_status: "pending", bounced: false, pc_notified_of_bounce: true })
+    .update({
+      email_status: "pending",
+      bounced: false,
+      pc_notified_of_bounce: true,
+      // Corrected address needs to go through verification again before resending.
+      email_verified_at: null,
+      email_verified_by_staff_id: null,
+    })
     .eq("session_id", sessionId);
   revalidatePath(`/pc/session/${sessionId}`);
 }
@@ -234,23 +287,33 @@ export async function markKitDelivered(sessionId: string, guestChoseJoinDgroup: 
 export async function submitDgroupRegistration(
   token: string,
   data: {
+    facebook: string;
+    gender: Gender;
+    occupation: string;
+    invited_by_name: string;
     life_stage: string;
+    life_stage_other: string;
     schedule_pref: string;
     mode: DgroupMode;
-    occupation: string;
     language: string;
   }
 ) {
   const admin = createAdminClient();
   const { data: session } = await admin
     .from("checkin_sessions")
-    .select("id")
+    .select("id, guest_id")
     .eq("qr_token", token)
     .single();
   if (!session) throw new Error("Session not found.");
 
+  const { facebook, gender, ...regFields } = data;
+
+  // Gender/Facebook belong to the guest record (not per-registration), matching
+  // the intake table where the rest of the guest's identity already lives.
+  await admin.from("guests").update({ gender, facebook }).eq("id", session.guest_id);
+
   await admin.from("dgroup_registrations").upsert(
-    { session_id: session.id, ...data },
+    { session_id: session.id, ...regFields },
     { onConflict: "session_id" }
   );
 
@@ -316,6 +379,91 @@ export async function claimDgroupRegistration(registrationId: string) {
     })
     .eq("id", registrationId);
   revalidatePath("/pc/dashboard");
+}
+
+// ------------------------------------------------------------------
+// ADMIN-ONLY — Miner assignment & placement pipeline
+// Mirrors the "Harvests (Mined)" tracking sheet: a Registered Seeker gets
+// assigned to a Miner, who works them through contact -> confirmation ->
+// placement (or an unsuccessful outcome).
+// ------------------------------------------------------------------
+async function requireAdmin() {
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in.");
+  const { data: requesterStaff } = await supabase
+    .from("staff")
+    .select("role")
+    .eq("auth_user_id", user.id)
+    .single();
+  if (requesterStaff?.role !== "admin") {
+    throw new Error("Only admins can manage the Miner/placement workflow.");
+  }
+  return supabase;
+}
+
+export async function assignMiner(registrationId: string, minerId: string) {
+  const supabase = await requireAdmin();
+  const { error } = await supabase
+    .from("dgroup_registrations")
+    .update({
+      miner_id: minerId,
+      miner_assigned_at: new Date().toISOString(),
+      placement_status: "awaiting_contact_confirmation" as PlacementStatus,
+    })
+    .eq("id", registrationId);
+  if (error) throw error;
+
+  revalidatePath("/pc/admin/miners");
+  revalidatePath("/pc/admin/stats");
+}
+
+export async function unassignMiner(registrationId: string) {
+  const supabase = await requireAdmin();
+  const { error } = await supabase
+    .from("dgroup_registrations")
+    .update({
+      miner_id: null,
+      miner_assigned_at: null,
+      placement_status: "unassigned" as PlacementStatus,
+    })
+    .eq("id", registrationId);
+  if (error) throw error;
+
+  revalidatePath("/pc/admin/miners");
+  revalidatePath("/pc/admin/stats");
+}
+
+export async function updatePlacementStatus(
+  registrationId: string,
+  status: PlacementStatus,
+  notes?: string
+) {
+  const supabase = await requireAdmin();
+
+  const now = new Date().toISOString();
+  const timestampPatch: Record<string, string> = {};
+  if (status === "contacted_awaiting_response") timestampPatch.miner_contacted_at = now;
+  if (status === "awaiting_attendance_confirmation") timestampPatch.attendance_confirmed_at = now;
+  if (["placed_miner", "placed_miner_dl", "placed_other_dl"].includes(status)) {
+    timestampPatch.placed_at = now;
+  }
+  if (status === "unsuccessful") timestampPatch.unsuccessful_at = now;
+
+  const { error } = await supabase
+    .from("dgroup_registrations")
+    .update({
+      placement_status: status,
+      ...timestampPatch,
+      ...(notes !== undefined ? { placement_notes: notes } : {}),
+    })
+    .eq("id", registrationId);
+  if (error) throw error;
+
+  revalidatePath("/pc/admin/miners");
+  revalidatePath("/pc/admin/stats");
 }
 
 // ------------------------------------------------------------------
@@ -394,4 +542,46 @@ export async function updateStaffMember(
   if (error) throw error;
 
   revalidatePath("/pc/admin/coaches");
+}
+
+// ------------------------------------------------------------------
+// AUTH — change password (logged in) & forgot-password reset request.
+// Available to both PCs and admins — Supabase Auth doesn't distinguish;
+// role only determines which app screens the account can reach.
+// ------------------------------------------------------------------
+export async function changePassword(currentPassword: string, newPassword: string) {
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) throw new Error("Not signed in.");
+
+  if (newPassword.length < 8) {
+    throw new Error("New password must be at least 8 characters.");
+  }
+
+  // Re-verify the current password before allowing a change.
+  const { error: verifyError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  });
+  if (verifyError) throw new Error("Current password is incorrect.");
+
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+
+  return { success: true };
+}
+
+export async function requestPasswordReset(email: string) {
+  const supabase = await createServerSupabase();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+  // Always return success regardless of whether the email exists, so this
+  // can't be used to enumerate staff accounts.
+  await supabase.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: `${appUrl}/pc/reset-password`,
+  });
+
+  return { success: true };
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PHASES } from "@/lib/types";
+import { signOut } from "@/app/pc/login/actions";
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
@@ -26,7 +27,7 @@ export default async function AdminDashboard() {
 
   const { data: staffRow } = await supabase
     .from("staff")
-    .select("role")
+    .select("full_name, role")
     .eq("auth_user_id", user.id)
     .single();
 
@@ -64,10 +65,25 @@ export default async function AdminDashboard() {
 
   return (
     <main className="flex-1 px-6 py-10 max-w-5xl mx-auto w-full">
-      <p className="text-sm mb-1" style={{ color: "var(--amber-deep)" }}>
-        Admin
-      </p>
-      <h1 className="text-2xl font-serif mb-8">Welcome Center overview</h1>
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <p className="text-sm mb-1" style={{ color: "var(--amber-deep)" }}>
+            Admin
+          </p>
+          <h1 className="text-2xl font-serif">Welcome Center overview</h1>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-3 text-sm" style={{ color: "var(--ink-soft)" }}>
+            <span>{staffRow?.full_name || user?.email}</span>
+            <form action={signOut}>
+              <button className="btn-secondary text-sm">Sign out</button>
+            </form>
+          </div>
+          <Link href="/pc/change-password" className="text-xs underline" style={{ color: "var(--teal-deep)" }}>
+            Change password
+          </Link>
+        </div>
+      </div>
 
       <div className="grid grid-cols-3 md:grid-cols-4 gap-4 mb-6">
         <StatCard label="Total guests" value={total} />
@@ -81,9 +97,15 @@ export default async function AdminDashboard() {
         <StatCard label="Unclaimed DGroup sign-ups" value={unclaimedCount} />
       </div>
 
-      <div className="mb-10">
+      <div className="mb-10 flex flex-col gap-2">
         <Link href="/pc/admin/coaches" className="text-sm underline" style={{ color: "var(--teal-deep)" }}>
           Manage Prayer Coaches →
+        </Link>
+        <Link href="/pc/admin/miners" className="text-sm underline" style={{ color: "var(--teal-deep)" }}>
+          Miner &amp; DGroup placement →
+        </Link>
+        <Link href="/pc/admin/stats" className="text-sm underline" style={{ color: "var(--teal-deep)" }}>
+          Placement funnel &amp; stats →
         </Link>
       </div>
 

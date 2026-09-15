@@ -5,12 +5,14 @@ import { formatDateTime } from "@/lib/format";
 import {
   TierPicker,
   ConfirmLockButton,
+  EmailVerification,
   MaterialsButton,
   BounceControls,
   KitDeliveredButton,
   DgroupRouting,
 } from "@/components/SessionControls";
-import type { Phase } from "@/lib/types";
+import { PLACEMENT_STATUSES } from "@/lib/types";
+import type { Phase, PlacementStatus } from "@/lib/types";
 
 export default async function SessionPage({
   params,
@@ -49,9 +51,14 @@ export default async function SessionPage({
       <h1 className="text-2xl font-serif mb-1">
         {guest?.full_name || "Guest not yet named"}
       </h1>
-      <p className="text-xs mb-10" style={{ color: "var(--ink-soft)" }}>
+      <p className="text-xs mb-2" style={{ color: "var(--ink-soft)" }}>
         Checked in {formatDateTime(session.created_at)}
       </p>
+      <div className="text-sm mb-10 flex flex-wrap gap-x-6 gap-y-1" style={{ color: "var(--ink-soft)" }}>
+        <span>Email: <span style={{ color: "var(--ink)" }}>{guest?.email || "—"}</span></span>
+        <span>Contact #: <span style={{ color: "var(--ink)" }}>{guest?.phone || "—"}</span></span>
+        <span>Age: <span style={{ color: "var(--ink)" }}>{guest?.age ?? "—"}</span></span>
+      </div>
 
       <div className="grid md:grid-cols-[200px_1fr] gap-10">
         <aside>
@@ -136,7 +143,15 @@ export default async function SessionPage({
               </div>
 
               {letters?.email_status === "pending" && letters?.print_status === "pending" && (
-                <MaterialsButton sessionId={session.id} />
+                <div className="flex flex-col gap-4">
+                  <EmailVerification
+                    sessionId={session.id}
+                    guestId={guest.id}
+                    currentEmail={guest?.email ?? null}
+                    verifiedAt={letters?.email_verified_at ?? null}
+                  />
+                  <MaterialsButton sessionId={session.id} disabled={!letters?.email_verified_at} />
+                </div>
               )}
 
               {letters?.email_status === "sent" && !letters?.bounced && (
@@ -162,13 +177,34 @@ export default async function SessionPage({
               {dgroupReg ? (
                 <>
                   <div className="text-sm mb-4 grid grid-cols-2 gap-y-1" style={{ color: "var(--ink-soft)" }}>
-                    <span>Life stage</span><span style={{ color: "var(--ink)" }}>{dgroupReg.life_stage}</span>
+                    <span>Gender</span><span style={{ color: "var(--ink)" }}>{guest?.gender || "—"}</span>
+                    <span>Facebook</span><span style={{ color: "var(--ink)" }}>{guest?.facebook || "—"}</span>
+                    <span>Marital status</span>
+                    <span style={{ color: "var(--ink)" }}>
+                      {dgroupReg.life_stage === "Other" ? dgroupReg.life_stage_other : dgroupReg.life_stage}
+                    </span>
+                    <span>Invited by</span><span style={{ color: "var(--ink)" }}>{dgroupReg.invited_by_name || "—"}</span>
                     <span>Schedule</span><span style={{ color: "var(--ink)" }}>{dgroupReg.schedule_pref}</span>
                     <span>Mode</span><span style={{ color: "var(--ink)" }}>{dgroupReg.mode}</span>
                     <span>Occupation</span><span style={{ color: "var(--ink)" }}>{dgroupReg.occupation}</span>
                     <span>Language</span><span style={{ color: "var(--ink)" }}>{dgroupReg.language}</span>
                   </div>
                   <DgroupRouting sessionId={session.id} />
+
+                  {dgroupReg.joining_pc_group === false && (
+                    <p className="text-xs mt-4" style={{ color: "var(--ink-soft)" }}>
+                      Placement status:{" "}
+                      <span style={{ color: "var(--ink)" }}>
+                        {PLACEMENT_STATUSES.find((s) => s.key === (dgroupReg.placement_status as PlacementStatus))
+                          ?.label ?? dgroupReg.placement_status}
+                      </span>{" "}
+                      · managed on the{" "}
+                      <a href="/pc/admin/miners" className="underline" style={{ color: "var(--teal-deep)" }}>
+                        Miner &amp; placement
+                      </a>{" "}
+                      page.
+                    </p>
+                  )}
                 </>
               ) : (
                 <p className="text-sm" style={{ color: "var(--ink-soft)" }}>

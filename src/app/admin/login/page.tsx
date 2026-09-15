@@ -71,6 +71,11 @@ export default function AdminLoginPage() {
         </form>
 
         <p className="text-xs mt-8" style={{ color: "var(--ink-soft)" }}>
+          <Link href="/pc/forgot-password" className="underline">
+            Forgot password?
+          </Link>
+        </p>
+        <p className="text-xs mt-2" style={{ color: "var(--ink-soft)" }}>
           Prayer Coach?{" "}
           <Link href="/pc/login" className="underline">
             Sign in here instead

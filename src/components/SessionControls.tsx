@@ -7,6 +7,7 @@ import {
   triggerMaterialsDelivery,
   markEmailBounced,
   correctGuestEmail,
+  verifyGuestEmail,
   markKitDelivered,
   routeDgroupToPc,
   releaseDgroupToPool,
@@ -52,16 +53,94 @@ export function ConfirmLockButton({ sessionId, disabled }: { sessionId: string; 
   );
 }
 
-export function MaterialsButton({ sessionId }: { sessionId: string }) {
+export function EmailVerification({
+  sessionId,
+  guestId,
+  currentEmail,
+  verifiedAt,
+}: {
+  sessionId: string;
+  guestId: string;
+  currentEmail: string | null;
+  verifiedAt: string | null;
+}) {
   const [pending, startTransition] = useTransition();
+  const [email, setEmail] = useState(currentEmail ?? "");
+  const [error, setError] = useState<string | null>(null);
+
+  if (verifiedAt) {
+    return (
+      <p className="text-sm" style={{ color: "var(--teal-deep)" }}>
+        ✓ Email verified — {currentEmail}
+      </p>
+    );
+  }
+
   return (
-    <button
-      disabled={pending}
-      onClick={() => startTransition(() => triggerMaterialsDelivery(sessionId))}
-      className="btn-primary"
-    >
-      {pending ? "Sending…" : "Print letter & send email"}
-    </button>
+    <div className="flex flex-col gap-2">
+      <label className="block text-sm" style={{ color: "var(--ink-soft)" }}>
+        Confirm the guest&apos;s email before sending
+      </label>
+      <div className="flex items-end gap-2">
+        <input
+          className="field"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="guest@email.com"
+        />
+        <button
+          disabled={pending || !email.trim()}
+          className="btn-secondary"
+          onClick={() =>
+            startTransition(async () => {
+              setError(null);
+              try {
+                await verifyGuestEmail(sessionId, guestId, email);
+              } catch (err) {
+                setError(err instanceof Error ? err.message : "Something went wrong.");
+              }
+            })
+          }
+        >
+          {pending ? "Verifying…" : "Verify email"}
+        </button>
+      </div>
+      {error && (
+        <p className="text-xs" style={{ color: "var(--rose-deep)" }}>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function MaterialsButton({ sessionId, disabled }: { sessionId: string; disabled?: boolean }) {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <div className="flex flex-col gap-2">
+      <button
+        disabled={pending || disabled}
+        onClick={() =>
+          startTransition(async () => {
+            setError(null);
+            try {
+              await triggerMaterialsDelivery(sessionId);
+            } catch (err) {
+              setError(err instanceof Error ? err.message : "Something went wrong.");
+            }
+          })
+        }
+        className="btn-primary self-start"
+      >
+        {pending ? "Sending…" : "Print letter & send email"}
+      </button>
+      {error && (
+        <p className="text-xs" style={{ color: "var(--rose-deep)" }}>
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 

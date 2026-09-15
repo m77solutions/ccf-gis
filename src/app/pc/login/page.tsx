@@ -79,9 +79,10 @@ export default function LoginPage() {
           <LoginForm />
         </Suspense>
 
-        <p className="text-xs mt-8" style={{ color: "var(--ink-soft)" }}>
-          Accounts are created by an admin in Supabase Auth, then linked to a{" "}
-          <code>staff</code> row. See README.
+        <p className="text-xs mt-4" style={{ color: "var(--ink-soft)" }}>
+          <Link href="/pc/forgot-password" className="underline">
+            Forgot password?
+          </Link>
         </p>
         <p className="text-xs mt-2" style={{ color: "var(--ink-soft)" }}>
           Admin?{" "}
